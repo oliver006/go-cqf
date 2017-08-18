@@ -1,6 +1,8 @@
 package cqf
 
 import (
+	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 )
@@ -223,48 +225,67 @@ func TestAlottOfTheSameMulti(t *testing.T) {
 	}
 }
 
-func TestAlottProblem(t *testing.T) {
+func TestCountOkThenInsertAndCountStillOk(t *testing.T) {
 
 	c := getCQF()
 
-	//c.InsertHash(uint64(133260), 1)
-	//c.InsertHash( uint64(133259), 1)
+	c.InsertHash(uint32(14), 6)
+	if got := c.CountHash(uint32(14)); got != uint64(6) {
+		t.Errorf("got: %d, expected: %d", got, uint64(6))
 
-	start := uint32(133260)
-	stop := uint32(133138)
-	pos := start
-	for pos > stop {
-		c.InsertHash(pos, 1)
-		pos--
+	}
+	fmt.Println("ok")
+
+	c.InsertHash(uint32(1), 5)
+
+	fmt.Println("ok")
+	if got := c.CountHash(uint32(14)); got != uint64(6) {
+		t.Errorf("got: %d, expected: %d", got, uint64(6))
+
+	}
+
+	c.InsertHash(uint32(15), 5)
+
+	fmt.Println("ok")
+	if got := c.CountHash(uint32(14)); got != uint64(6) {
+		t.Errorf("got: %d, expected: %d", got, uint64(6))
+
 	}
 }
-
-/*
 
 func TestFull(t *testing.T) {
 	c := getCQF()
 
 	checkVals := map[uint32]uint64{}
 
-	count := uint32(rand.Int31n(1000) + 1000)
-	for count > 0 {
-		hash := count
+	count := uint32(rand.Int31n(10000) + 10000)
 
-		amount := uint64(rand.Int63n(8))
+	for count > 0 {
+		hash := uint32(rand.Int63n(math.MaxUint32-2) + 1)
+		amount := uint64(rand.Int63n(1024*1024) + 1)
 		c.InsertHash(uint32(hash), amount)
+
 		val := checkVals[hash]
 		val += amount
 		checkVals[hash] = val
 
-		count --
+		count--
 	}
 
+	fmt.Printf("total number of unique hashes: %d \n", len(checkVals))
+
+	off := 0
 	for hash, want := range checkVals {
-		if got := c.CountHash(hash); got != want {
-			t.Errorf("got: %d, expected: %d", got, want)
-			return
+		if got := c.CountHash(hash); got != want && got == 0 {
+			off++
 		}
 	}
 
+	fmt.Printf("off: %d \n", off)
+
 }
-*/
+
+func init() {
+	rand.Seed(1)
+	fmt.Println("")
+}

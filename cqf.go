@@ -85,6 +85,7 @@ func (c *CQF) Insert(item []byte, count uint64) {
 }
 
 func (c *CQF) InsertHash(hash uint32, count uint64) {
+	//	fmt.Printf("InsertHash(%d, %d) \n", hash, count)
 	if count == 1 {
 		c.insert1(uint64(hash))
 	} else {
@@ -166,6 +167,7 @@ func (c *CQF) setSlot(index uint64, val uint64) {
 	blockIdx := index / SlotsPerBlock
 	slotIdx := index % SlotsPerBlock
 
+	//	fmt.Printf("set_slot( %2d %2d %2d ) --> %d \n", index, blockIdx, slotIdx, newVal)
 	c.blocks[blockIdx].slots[slotIdx] = newVal
 }
 
@@ -173,10 +175,13 @@ func (c *CQF) getSlot(index uint64) uint64 {
 	blockIdx := index / SlotsPerBlock
 	slotIdx := index % SlotsPerBlock
 
+	//	fmt.Printf("get_slot( %2d %2d %2d )", index, blockIdx, slotIdx)
 	res := uint64(c.blocks[blockIdx].slots[slotIdx])
+	//	fmt.Printf(" --> %d \n", res)
 
 	return res
 }
+
 func (c *CQF) splitHash(hash uint64) (remainder uint64, bucketIndex uint64, bucketBlockOffset uint64) {
 	remainder = hash & c.bitsPerSlotMasked
 	bucketIndex = hash >> c.bitsPerSlot
@@ -302,10 +307,12 @@ func (c *CQF) find_next_n_empty_slots(from, n uint64, res *[]uint64) {
 func (c *CQF) shift_slots(first, last, distance uint64) {
 	if distance == 1 {
 		c.shiftRemainders(first, last+1)
-	} else {
-		for i := last; i >= first; i-- {
-			c.setSlot(i+distance, c.getSlot(i))
-		}
+		return
+	}
+
+	for tmp := int(last); tmp >= int(first); tmp-- {
+		i := uint64(tmp)
+		c.setSlot(i+distance, c.getSlot(i))
 	}
 }
 
