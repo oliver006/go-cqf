@@ -240,12 +240,10 @@ func TestAlottProblem(t *testing.T) {
 	}
 }
 
-
-
 func TestFull(t *testing.T) {
 	c := getCQF()
 
-	checkVals := map[uint32]uint64
+	checkVals := map[uint32]uint64{}
 
 	count := uint32(rand.Int31n(100000) + 100000)
 	for count > 0 {
@@ -263,10 +261,10 @@ func TestFull(t *testing.T) {
 	}
 
 	for hash, want := range checkVals {
-	if got := c.CountHash(hash); got != want {
-		t.Errorf("got: %d, expected: %d", got, want)
-		return
+		if got := c.CountHash(hash); got != want {
+			t.Errorf("got: %d, expected: %d", got, want)
+			return
+		}
 	}
-
 
 }
