@@ -19,15 +19,15 @@ func TestNew(t *testing.T) {
 
 func TestNoInsert(t *testing.T) {
 	c := getCQF()
-	if count := c.CountHash(uint64(0)); count != 0 {
+	if count := c.CountHash(uint32(0)); count != 0 {
 		t.Errorf("shouldn't have found uint(0)")
 	}
 }
 
 func TestZero(t *testing.T) {
 	c := getCQF()
-	c.InsertHash(uint64(1), 1)
-	if count := c.CountHash(uint64(0)); count != 0 {
+	c.InsertHash(uint32(1), 1)
+	if count := c.CountHash(uint32(0)); count != 0 {
 		t.Errorf("shouldn't have found uint(0)")
 	}
 }
@@ -35,8 +35,8 @@ func TestZero(t *testing.T) {
 func TestSimpleInsert(t *testing.T) {
 	c := getCQF()
 
-	key1 := uint64(8)
-	key2 := uint64(789010101)
+	key1 := uint32(8)
+	key2 := uint32(789010101)
 	c.InsertHash(key1, 1)
 	c.InsertHash(key2, 1)
 
@@ -52,14 +52,14 @@ func TestMultipleKeys(t *testing.T) {
 
 	c := getCQF()
 
-	keys := map[uint64]bool{
+	keys := map[uint32]bool{
 		1:     true,
 		1024:  true,
 		16383: true,
 		16384: true,
 	}
 
-	var maxVal uint64
+	var maxVal uint32
 	for k, _ := range keys {
 		c.InsertHash(k, 1)
 		if k > maxVal {
@@ -67,7 +67,7 @@ func TestMultipleKeys(t *testing.T) {
 		}
 	}
 
-	var lookupKey uint64
+	var lookupKey uint32
 	for lookupKey < maxVal {
 		if _, ok := keys[lookupKey]; !ok {
 			if count := c.CountHash(lookupKey); count != 0 {
@@ -84,7 +84,7 @@ func TestAlottOfRandomHashes(t *testing.T) {
 	count := uint64(1) << 8
 	for count > 0 {
 
-		hash := uint64(rand.Int31())
+		hash := uint32(rand.Int31())
 		c.InsertHash(hash, 1)
 		if c.CountHash(hash) == 0 {
 			t.Errorf("Didn't find %d", hash)
@@ -97,7 +97,7 @@ func TestAlottOfRandomHashes(t *testing.T) {
 func TestAlottOfTheSame(t *testing.T) {
 	c := getCQF()
 
-	hash := uint64(400000)
+	hash := uint32(400000)
 	count := rand.Int31n(13457) + 1000
 	amountWant := uint64(count)
 	for count > 0 {
@@ -114,7 +114,7 @@ func TestAlottOfTheSame(t *testing.T) {
 func TestMultiInsert(t *testing.T) {
 	c := getCQF()
 
-	hash := uint64(8)
+	hash := uint32(8)
 	lastAmount := uint64(0)
 	c.InsertHash(hash, 1)
 
@@ -146,7 +146,7 @@ func TestString(t *testing.T) {
 func TestAlottMixed(t *testing.T) {
 	c := getCQF()
 
-	hash := uint64(rand.Int31())
+	hash := uint32(rand.Int31())
 	count := rand.Int31n(10000) + 1000
 	totalAmount := uint64(0)
 
@@ -169,7 +169,7 @@ func TestAlottMixed(t *testing.T) {
 func TestMultipleAmounts(t *testing.T) {
 	c := getCQF()
 
-	hash := uint64(64)
+	hash := uint32(64)
 	amounts := []uint64{32, 2, 1, 1, 10, 20, 4, 4, 1, 1, 32, 1, 4}
 	total := uint64(0)
 	for _, amount := range amounts {
@@ -185,7 +185,7 @@ func TestMultipleAmounts(t *testing.T) {
 func TestMultiSimple(t *testing.T) {
 	c := getCQF()
 
-	hash := uint64(4)
+	hash := uint32(4)
 	total := uint64(0)
 	count := 100
 	for count < 10 {
@@ -208,7 +208,7 @@ func TestMultiSimple(t *testing.T) {
 func TestAlottOfTheSameMulti(t *testing.T) {
 	c := getCQF()
 
-	hash := uint64(4)
+	hash := uint32(4)
 	want := uint64(0)
 	count := 10 //rand.Int31n(1234) + 100
 
@@ -221,5 +221,21 @@ func TestAlottOfTheSameMulti(t *testing.T) {
 
 	if got := c.CountHash(hash); got != want {
 		t.Errorf("got: %d, expected: %d", got, want)
+	}
+}
+
+func TestAlottProblem(t *testing.T) {
+
+	c := getCQF()
+
+	//c.InsertHash(uint64(133260), 1)
+	//c.InsertHash( uint64(133259), 1)
+
+	start := uint32(133260)
+	stop := uint32(133138)
+	pos := start
+	for pos > stop {
+		c.InsertHash(pos, 1)
+		pos--
 	}
 }

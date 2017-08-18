@@ -1,15 +1,13 @@
 package cqf
 
 import (
-	"math"
-
 	"github.com/tmthrgd/go-popcount"
+	"math"
 )
 
 func bitmask(numbits uint64) uint64 {
 	if numbits == 64 {
-		return math.MaxInt64
-		//		return uint64(18446744073709551615)
+		return math.MaxUint64
 	}
 	return uint64(1)<<numbits - 1
 }
@@ -20,11 +18,13 @@ func bitrank(val, pos uint64) uint64 {
 }
 
 func popcntv(val uint64, ignore uint64) uint64 {
+	var res uint64
 	if ignore%64 != 0 {
-		return popcnt(val & ^bitmask(ignore%64))
+		res = popcnt(val & ^bitmask(ignore%64))
 	} else {
-		return popcnt(val)
+		res = popcnt(val)
 	}
+	return res
 }
 
 func popcnt(val uint64) uint64 {
@@ -44,9 +44,7 @@ func shiftIntoB(a, b, bstart, bend, amount uint64) uint64 {
 
 func bitselectv(val, ignore, rank uint64) uint64 {
 	valNew := val & ^bitmask(ignore%64)
-
-	res := bitselect(valNew, rank)
-	return res
+	return bitselect(valNew, rank)
 }
 
 func bitselect(x uint64, k uint64) uint64 {

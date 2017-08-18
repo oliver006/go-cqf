@@ -37,8 +37,14 @@ type CQF struct {
 }
 
 func NewCQF() (*CQF, error) {
-	keyBits := uint64(32)
-	numSlots := uint64(1 << (keyBits - 8))
+
+	qbits := uint64(24)
+
+	keyBits := uint64(qbits + 8)
+	// todo: this correct?
+	numSlots := uint64(1 << qbits)
+	//keyBits := uint64(32)
+	//numSlots := uint64(1 << (keyBits - 8))
 
 	c := CQF{
 		xnSlots: numSlots + 10*uint64(math.Sqrt(float64(numSlots))),
@@ -68,29 +74,29 @@ func NewCQF() (*CQF, error) {
 	return &c, nil
 }
 
-func hashItem(item []byte) uint64 {
+func hashItem(item []byte) uint32 {
 	hasher := murmur3.New32()
 	hasher.Write(item)
-	return uint64(hasher.Sum32())
+	return uint32(hasher.Sum32())
 }
 
 func (c *CQF) Insert(item []byte, count uint64) {
 	c.InsertHash(hashItem(item), count)
 }
 
-func (c *CQF) InsertHash(hash uint64, count uint64) {
+func (c *CQF) InsertHash(hash uint32, count uint64) {
 	if count == 1 {
-		c.insert1(hash)
+		c.insert1(uint64(hash))
 	} else {
-		c.insert(hash, count)
+		c.insert(uint64(hash), count)
 	}
 }
 
 func (c *CQF) Count(item []byte) uint64 {
-	return c.countHash(hashItem(item))
+	return c.countHash(uint64(hashItem(item)))
 }
 
-func (c *CQF) CountHash(hash uint64) uint64 {
+func (c *CQF) CountHash(hash uint32) uint64 {
 	return c.countHash(uint64(hash))
 }
 
@@ -171,7 +177,6 @@ func (c *CQF) getSlot(index uint64) uint64 {
 
 	return res
 }
-
 func (c *CQF) splitHash(hash uint64) (remainder uint64, bucketIndex uint64, bucketBlockOffset uint64) {
 	remainder = hash & c.bitsPerSlotMasked
 	bucketIndex = hash >> c.bitsPerSlot
@@ -345,8 +350,6 @@ func (c *CQF) insert_replace_slots_and_shift_remainders_and_runends_and_offsets(
 			// METADATA_WORD(qf, runends, overwrite_index + total_remainders - 1) |= 1ULL << (((overwrite_index + total_remainders - 1) % SLOTS_PER_BLOCK) % 64);
 			val := c.METADATA_WORD_runends(overwrite_index + total_remainders - 1)
 			*val = *val | (uint64(1) << (((overwrite_index + total_remainders - 1) % SlotsPerBlock) % 64))
-
-			break
 		case 1: // append to bucket
 			//METADATA_WORD(qf, runends, overwrite_index + noverwrites - 1)      &= ~(1ULL << (((overwrite_index + noverwrites - 1) % SLOTS_PER_BLOCK) % 64));
 			val := c.METADATA_WORD_runends(overwrite_index + noverwrites - 1)
@@ -355,13 +358,10 @@ func (c *CQF) insert_replace_slots_and_shift_remainders_and_runends_and_offsets(
 			//METADATA_WORD(qf, runends, overwrite_index + total_remainders - 1) |= 1ULL << (((overwrite_index + total_remainders - 1) % SLOTS_PER_BLOCK) % 64);
 			val = c.METADATA_WORD_runends(overwrite_index + total_remainders - 1)
 			*val = *val | (uint64(1) << (((overwrite_index + total_remainders - 1) % SlotsPerBlock) % 64))
-
-			break
 		case 2: // insert into bucket
 			//METADATA_WORD(qf, runends, overwrite_index + total_remainders - 1) &= ~(1ULL << (((overwrite_index + total_remainders - 1) % SLOTS_PER_BLOCK) % 64));
 			val := c.METADATA_WORD_runends(overwrite_index + total_remainders - 1)
 			*val = *val & (^(uint64(1) << (((overwrite_index + total_remainders - 1) % SlotsPerBlock) % 64)))
-			break
 		default:
 			panic("Invalid operation ")
 		}
@@ -660,7 +660,6 @@ func (c *CQF) insert1(hash uint64) {
 
 				val := c.METADATA_WORD_runends(insert_index)
 				*val = *val | uint64(1)<<((insert_index%SlotsPerBlock)%64)
-
 			case 1:
 				// METADATA_WORD(qf, runends, insert_index-1) &= ~(1ULL << (((insert_index-1) % SLOTS_PER_BLOCK) % 64));
 				val := c.METADATA_WORD_runends(insert_index - 1)
@@ -669,12 +668,11 @@ func (c *CQF) insert1(hash uint64) {
 				//METADATA_WORD(qf, runends, insert_index)   |= 1ULL << ((insert_index % SLOTS_PER_BLOCK) % 64);
 				val = c.METADATA_WORD_runends(insert_index)
 				*val = *val | uint64(1)<<((insert_index%SlotsPerBlock)%64)
-				break
 			case 2:
 				// METADATA_WORD(qf, runends, insert_index)   &= ~(1ULL << ((insert_index % SLOTS_PER_BLOCK) % 64));
 				val := c.METADATA_WORD_runends(insert_index)
+
 				*val = *val & ^(uint64(1) << (((insert_index) % SlotsPerBlock) % 64))
-				break
 			default:
 				panic(fmt.Sprintf("Invalid operation %d\n", operation))
 			}
@@ -716,7 +714,6 @@ func (c *CQF) block_offset(blockidx uint64) uint64 {
 }
 
 func (c *CQF) runEnd(hashBucketIndex uint64) uint64 {
-
 	bucket_block_index := hashBucketIndex / SlotsPerBlock
 	bucket_intrablock_offset := hashBucketIndex % SlotsPerBlock
 	bucket_blocks_offset := c.block_offset(bucket_block_index)
@@ -740,23 +737,26 @@ func (c *CQF) runEnd(hashBucketIndex uint64) uint64 {
 
 	//	uint64_t runend_block_offset = bitselectv(get_block(qf, runend_block_index)->runends[0], runend_ignore_bits, runend_rank);
 	runend_block_offset := bitselectv(c.blocks[runend_block_index].runends[0], runend_ignore_bits, runend_rank)
-
 	if runend_block_offset == SlotsPerBlock {
 		if bucket_blocks_offset == 0 && bucket_intrablock_rank == 0 {
-			// The block begins in empty space, and this bucket is in that region of empty space //
+			/* The block begins in empty space, and this bucket is in that region of empty space */
 			return hashBucketIndex
-		}
-		for {
-			runend_rank -= popcntv(c.blocks[runend_block_index].runends[0], runend_ignore_bits)
-			runend_block_index++
-			runend_ignore_bits = 0
-			runend_block_offset = bitselectv(c.blocks[runend_block_index].runends[0], runend_ignore_bits, runend_rank)
-			if runend_block_offset != SlotsPerBlock {
-				break
+		} else {
+
+			for {
+				// runend_rank        -= popcntv(get_block(qf, runend_block_index)->runends, METADATA_WORDS_PER_BLOCK, runend_ignore_bits);
+				runend_rank -= popcntv(c.blocks[runend_block_index].runends[0], runend_ignore_bits)
+				runend_block_index++
+				runend_ignore_bits = 0
+				// runend_block_offset = bitselectv(get_block(qf, runend_block_index)->runends, METADATA_WORDS_PER_BLOCK, runend_ignore_bits, runend_rank);
+				runend_block_offset = bitselectv(c.blocks[runend_block_index].runends[0], runend_ignore_bits, runend_rank)
+
+				if runend_block_offset != SlotsPerBlock {
+					break
+				}
 			}
 		}
 	}
-
 	runend_index := SlotsPerBlock*runend_block_index + runend_block_offset
 
 	if runend_index < hashBucketIndex {
@@ -974,6 +974,7 @@ func (c *CQF) shiftRunEnds(first, last, distance uint64) {
 			val2 := c.METADATA_WORD_runends(64 * (last_word - 1))
 			*val = shiftIntoB(*val2, *val, 0, bend, distance)
 			last_word--
+
 		}
 	}
 
