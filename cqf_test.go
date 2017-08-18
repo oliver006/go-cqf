@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func getCQF() *CQF {
@@ -272,20 +273,24 @@ func TestFull(t *testing.T) {
 		count--
 	}
 
-	fmt.Printf("total number of unique hashes: %d \n", len(checkVals))
-
 	off := 0
 	for hash, want := range checkVals {
 		if got := c.CountHash(hash); got != want && got == 0 {
 			off++
 		}
 	}
+}
 
-	fmt.Printf("off: %d \n", off)
-
+func BenchmarkFull(b *testing.B) {
+	c := getCQF()
+	for n := 0; n < b.N; n++ {
+		hash := uint32(rand.Int63n(math.MaxUint32-2) + 1)
+		amount := uint64(rand.Int63n(1024*1024) + 1)
+		c.InsertHash(uint32(hash), amount)
+	}
 }
 
 func init() {
-	rand.Seed(1)
+	rand.Seed(time.Now().Unix())
 	fmt.Println("")
 }
