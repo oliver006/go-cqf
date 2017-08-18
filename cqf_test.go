@@ -81,9 +81,8 @@ func TestMultipleKeys(t *testing.T) {
 func TestAlottOfRandomHashes(t *testing.T) {
 	c := getCQF()
 
-	count := uint64(1) << 8
+	count := uint64(1) << 16
 	for count > 0 {
-
 		hash := uint32(rand.Int31())
 		c.InsertHash(hash, 1)
 		if c.CountHash(hash) == 0 {
@@ -98,7 +97,7 @@ func TestAlottOfTheSame(t *testing.T) {
 	c := getCQF()
 
 	hash := uint32(400000)
-	count := rand.Int31n(13457) + 1000
+	count := rand.Int31n(1345700) + 100000
 	amountWant := uint64(count)
 	for count > 0 {
 		c.InsertHash(hash, 1)
@@ -240,24 +239,24 @@ func TestAlottProblem(t *testing.T) {
 	}
 }
 
+/*
+
 func TestFull(t *testing.T) {
 	c := getCQF()
 
 	checkVals := map[uint32]uint64{}
 
-	count := uint32(rand.Int31n(100000) + 100000)
+	count := uint32(rand.Int31n(1000) + 1000)
 	for count > 0 {
-
 		hash := count
 
-		amount := uint64(rand.Int63n(1024))
+		amount := uint64(rand.Int63n(8))
 		c.InsertHash(uint32(hash), amount)
-		count--
-
 		val := checkVals[hash]
 		val += amount
 		checkVals[hash] = val
 
+		count --
 	}
 
 	for hash, want := range checkVals {
@@ -268,3 +267,4 @@ func TestFull(t *testing.T) {
 	}
 
 }
+*/

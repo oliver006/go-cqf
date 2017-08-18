@@ -401,43 +401,36 @@ func (c *CQF) encode_counter(remainder, counter uint64, slots *[]uint64) uint64 
 	p--
 	(*slots)[p] = remainder
 
-	if counter == 1 {
+	switch counter {
+	case 1:
 		return p
-	}
-
-	if counter == 2 {
-		p--
-		(*slots)[p] = remainder
-		return p
-	}
-
-	if counter == 3 && remainder == 0 {
-		p--
-		(*slots)[p] = remainder
+	case 2:
 		p--
 		(*slots)[p] = remainder
 		return p
-	}
+	case 3:
+		if remainder == 0 {
+			p--
+			(*slots)[p] = remainder
+			p--
+			(*slots)[p] = remainder
 
-	if counter == 3 && remainder > 0 {
-		p--
-		(*slots)[p] = 0
-		p--
-		(*slots)[p] = remainder
+		} else {
+			p--
+			(*slots)[p] = 0
+			p--
+			(*slots)[p] = remainder
+		}
 		return p
 	}
 
 	if remainder == 0 {
 		p--
 		(*slots)[p] = remainder
+		counter -= 4
 	} else {
 		base--
-	}
-
-	if remainder != 0 {
 		counter -= 3
-	} else {
-		counter -= 4
 	}
 
 	for {
@@ -682,7 +675,6 @@ func (c *CQF) insert1(hash uint64) {
 			 * and block of the empty slot
 			 * */
 			for i := hashBucketIndex/SlotsPerBlock + 1; i <= empty_slot_index/SlotsPerBlock; i++ {
-
 				// hint: 8 * 2 --> 2 = sizeof(offset)
 				if uint64(c.blocks[i].offset) < bitmask(8*2) {
 					c.blocks[i].offset++
@@ -702,14 +694,10 @@ func (c *CQF) insert1(hash uint64) {
 }
 
 func (c *CQF) block_offset(blockidx uint64) uint64 {
-
 	// hint: 8 * 2 --> sizeof(block.offset)
 	if uint64(c.blocks[blockidx].offset) < bitmask(8*2) {
 		return uint64(c.blocks[blockidx].offset)
 	}
-
-	// todo: correct? is this rally not implemented yet?
-	//	panic("block_offset - omg, not implemented yet")
 	return c.runEnd(SlotsPerBlock*blockidx-1) - SlotsPerBlock*blockidx + 1
 }
 
@@ -717,9 +705,6 @@ func (c *CQF) runEnd(hashBucketIndex uint64) uint64 {
 	bucket_block_index := hashBucketIndex / SlotsPerBlock
 	bucket_intrablock_offset := hashBucketIndex % SlotsPerBlock
 	bucket_blocks_offset := c.block_offset(bucket_block_index)
-
-	// 	uint64_t bucket_intrablock_rank   = bitrank(get_block(qf, bucket_block_index)->occupieds[0], bucket_intrablock_offset);
-
 	b := c.blocks[bucket_block_index]
 	bucket_intrablock_rank := bitrank(b.occupieds[0], bucket_intrablock_offset)
 
@@ -767,9 +752,8 @@ func (c *CQF) runEnd(hashBucketIndex uint64) uint64 {
 }
 
 func (c *CQF) decode_counter(index uint64) (last_el, remainder, count uint64) {
-
 	remainder = c.getSlot(index)
-	rem := remainder
+	orgRemainder := remainder
 
 	if c.isRunEnd(index) {
 		count = 1
@@ -783,30 +767,30 @@ func (c *CQF) decode_counter(index uint64) (last_el, remainder, count uint64) {
 		count = 1
 		last_el = index
 
-		if digit == rem {
+		if digit == orgRemainder {
 			count = 2
 			last_el++
 		}
 		return
 	}
 
-	if rem > 0 && digit >= rem {
+	if orgRemainder > 0 && digit >= orgRemainder {
 		count = 1
 		last_el = index
 
-		if digit == rem {
+		if digit == orgRemainder {
 			count = 2
 			last_el++
 		}
 		return
 	}
 
-	if rem > 0 && digit == 0 && c.getSlot(index+2) == rem {
+	if orgRemainder > 0 && digit == 0 && c.getSlot(index+2) == orgRemainder {
 		count = 3
 		last_el = index + 2
 	}
 
-	if rem == 0 && digit == 0 {
+	if orgRemainder == 0 && digit == 0 {
 		if c.getSlot(index+2) == 0 {
 			count = 3
 			last_el = index + 2
@@ -820,16 +804,16 @@ func (c *CQF) decode_counter(index uint64) (last_el, remainder, count uint64) {
 
 	cnt := uint64(0)
 	base := (uint64(1) << c.bitsPerSlot) - 1
-	if rem > 0 {
+	if orgRemainder > 0 {
 		base--
 	}
 
 	end := index + 1
-	for digit != rem && !c.isRunEnd(end) {
-		if digit > rem {
+	for digit != orgRemainder && !c.isRunEnd(end) {
+		if digit > orgRemainder {
 			digit--
 		}
-		if digit != 0 && rem != 0 {
+		if digit != 0 && orgRemainder != 0 {
 			digit--
 		}
 		cnt = cnt*base + digit
@@ -838,7 +822,7 @@ func (c *CQF) decode_counter(index uint64) (last_el, remainder, count uint64) {
 		digit = c.getSlot(end)
 	}
 
-	if rem > 0 {
+	if orgRemainder > 0 {
 		count = cnt + 3
 		last_el = end
 		return
@@ -873,7 +857,6 @@ func (c *CQF) countHash(hash uint64) uint64 {
 	for {
 		current_end, current_remainder, current_count := c.decode_counter(runstart_index)
 		if current_remainder == hashRemainder {
-
 			return current_count
 		}
 		runstart_index = current_end + 1
